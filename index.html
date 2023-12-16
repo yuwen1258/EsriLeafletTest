@@ -1,0 +1,283 @@
+<!--
+
+To run this demo, you need to replace 'YOUR_API_KEY' with an API key from the ArcGIS Developers dashboard.
+
+Sign up for a free account and get an API key.
+
+https://developers.arcgis.com/documentation/mapping-apis-and-services/get-started/
+
+-->
+
+
+<html>
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Esri Leaflet Tutorials: Display a map</title>
+
+    <!-- Load Leaflet from CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <!-- Load Esri Leaflet from CDN -->
+    <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet-vector@4.2.3/dist/esri-leaflet-vector.js"></script>
+
+    <!--axio-->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <!-- Load ArcGIS REST JS from CDN -->
+    <script src="https://unpkg.com/@esri/arcgis-rest-request@4.0.0/dist/bundled/request.umd.js"></script>
+    <script src="https://unpkg.com/@esri/arcgis-rest-routing@4.0.0/dist/bundled/routing.umd.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+      }
+      #directions {
+        position: absolute;
+        z-index: 1000;
+        width: 30%;
+        max-height: 50%;
+        right: 20px;
+        top: 20px;
+        overflow-y: auto; /* Show a scrollbar if needed */
+        background: white;
+        font-family: Arial, Helvetica, Verdana;
+        line-height: 1.5;
+        font-size: 14px;
+        padding: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+
+    <script>
+
+      const map = L.map("map", {
+        minZoom: 2
+      })
+
+      map.setView([22.99839525963271, 120.21948587250884], 16);
+
+      const apiKey = "AAPK8cc3c8834d4941d191dcad4ecbef08359syzfDNIiQFN_gp5ViWyRfyuFRsidpdAqohErdO2W1aNG2DbXhnFqji1CojBIm3M";
+
+      // 國土測繪中心 臺灣通用電子地圖
+      const baseEMAP = L.tileLayer('https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}', {
+        maxNativeZoom: 20,
+        maxZoom: 20
+      });
+      // 國土測繪中心 正射影像圖
+      const basePHOTO2 = L.tileLayer('https://wmts.nlsc.gov.tw/wmts/PHOTO2/default/GoogleMapsCompatible/{z}/{y}/{x}', {
+        maxNativeZoom: 20,
+        maxZoom: 20,
+        minZoom: 7
+      });
+      
+      function getV2Basemap(style) {
+        return L.esri.Vector.vectorBasemapLayer(style, {
+          apikey: apiKey,
+          version:2
+        })
+      }
+      
+      const basemapLayers = {
+
+        "arcgis/outdoor": getV2Basemap("arcgis/outdoor").addTo(map),
+
+        "arcgis/community": getV2Basemap("arcgis/community"),
+        "arcgis/navigation": getV2Basemap("arcgis/navigation"),
+        "arcgis/streets": getV2Basemap("arcgis/streets"),
+        "arcgis/streets-relief": getV2Basemap("arcgis/streets-relief"),
+        "arcgis/imagery": getV2Basemap("arcgis/imagery"),
+        "arcgis/oceans": getV2Basemap("arcgis/oceans"),
+        "arcgis/topographic": getV2Basemap("arcgis/topographic"),
+        "arcgis/light-gray": getV2Basemap("arcgis/light-gray"),
+        "arcgis/dark-gray": getV2Basemap("arcgis/dark-gray"),
+        "arcgis/human-geography": getV2Basemap("arcgis/human-geography"),
+        "arcgis/charted-territory": getV2Basemap("arcgis/charted-territory"),
+        "arcgis/nova": getV2Basemap("arcgis/nova"),
+        "osm/standard": getV2Basemap("osm/standard"),
+        "osm/navigation": getV2Basemap("osm/navigation"),
+        "osm/streets": getV2Basemap("osm/streets"),
+        "osm/blueprint": getV2Basemap("osm/blueprint"),
+        "台灣通用電子地圖":baseEMAP,
+        "正射影像圖": basePHOTO2
+      };
+      
+      L.control.layers(basemapLayers, null, { collapsed: true, position: 'bottomright' }).addTo(map);
+      
+      //Add ArcGIS Online FeatureLayer//
+      //地標
+      const trailheads = L.esri.featureLayer({
+        url: "https://services8.arcgis.com/yg9IFoJMgLZnSwbn/arcgis/rest/services/%E6%88%90%E5%A4%A7%E5%9C%B0%E6%A8%99/FeatureServer/0"
+    });
+      trailheads.addTo(map);
+
+      trailheads.bindPopup(function (layer) {
+
+        return L.Util.template("<b>{MARKNAME2}</b><br>地址：{ADDRESS}</br>", layer.feature.properties);
+
+    });
+
+    //人口資料
+    const campus = L.esri.featureLayer({
+        url: "https://services8.arcgis.com/yg9IFoJMgLZnSwbn/arcgis/rest/services/111%E5%B9%B46%E6%9C%88%E8%87%BA%E5%8D%97%E5%B8%82%E4%B8%89%E6%AE%B5%E5%B9%B4%E9%BD%A1%E7%B5%84%E6%80%A7%E5%88%A5%E4%BA%BA%E5%8F%A3%E7%B5%B1%E8%A8%88_%E4%BA%8C%E7%B4%9A%E7%99%BC%E5%B8%83%E5%8D%80/FeatureServer/0"
+    });
+    campus.addTo(map);
+
+    campus.bindPopup(function (layer) {
+
+        return L.Util.template("<b>二級發布區代碼：{CODE2}</b><br>0~14歲人口數：{A0A14_CNT}人</br>15~64歲人口數：{A15A64_CNT}人</br>65歲以上人口數：{A65UP_CNT}人", layer.feature.properties);
+
+    });
+
+    const ESRIfeature = {"地標":trailheads,
+                          "二級發布區人口組距資料": campus}
+    L.control.layers(null, ESRIfeature, { collapsed: true, position: 'bottomleft' }).addTo(map);
+
+    //介接API 
+        var cctvIcon = new L.Icon({
+                    iconUrl: 'https://cdn-icons-png.flaticon.com/512/3583/3583045.png',
+                    iconSize: [41, 41],
+                    });
+        
+        //介接api
+        async function getData() {
+            let url = 'https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/CCTV/City/Tainan?%24top=50&%24format=JSON'; //CCTV
+            
+            axios
+            .get(url)
+            .then(async (res) => {
+                let data = await res.data;
+                console.log(data.CCTVs);
+                //console.log(data);
+
+        
+            for ( j = 0 ; j < 36 ; j++ ) { 	
+                //展點
+                i = "<img src=\" " + data.CCTVs[j].VideoStreamURL + "\" width=\"380\" height=\"240\"/>"     //各別url寫成'<img src="https://example.com/image.jpg" alt="Image" width="320" height="240"/>' 形式
+                const CCTV = L.marker([data.CCTVs[j].PositionLat, data.CCTVs[j].PositionLon], {     //讀取經緯度座標
+                    icon: cctvIcon, 
+                    title: 'CCTV',
+                    opacity: 5.0
+                    }).addTo(map).bindPopup(                                                      //Popup顯示路名與CCTV畫面
+                        " 路名:" + data.CCTVs[j].RoadName + "</br>" + i,
+                        {maxWidth: "640", maxHeight: "480"}
+                        );
+            }
+            })
+            .catch((error) => {
+                console.log(error);
+            })
+        }
+        getData();
+
+    //Route
+    const directions = document.createElement("div");
+      directions.id = "directions";
+      if (ESRIfeature.二級發布區人口組距資料){
+        //directions.innerHTML = "Click on the map to create a start and end for the route.";
+        directions.innerHTML = "<b>＊＊關閉人口組距圖層以使用路徑規劃功能＊＊</b></br>路經規劃使用說明：</br>於地圖點選第一個點作為起點，再點選第二個點作為終點。如需規劃新路線，重新點選起終點即可";
+      }
+      else{
+        directions.innerHTML = "Click on the map to create a start and end for the route.";
+      }
+      
+      
+      document.body.appendChild(directions);
+
+      const startLayerGroup = L.layerGroup().addTo(map);
+      const endLayerGroup = L.layerGroup().addTo(map);
+
+      const routeLines = L.layerGroup().addTo(map);
+
+      let currentStep = "start";
+      let startCoords, endCoords;
+
+      function updateRoute() {
+        // Create the arcgis-rest-js authentication object to use later.
+        const authentication = arcgisRest.ApiKeyManager.fromKey(apiKey);
+
+        // make the API request
+        arcgisRest
+          .solveRoute({
+            stops: [startCoords, endCoords],
+            endpoint: "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World/solve",
+            authentication
+          })
+
+          .then((response) => {
+
+            routeLines.clearLayers();
+            L.geoJSON(response.routes.geoJson).addTo(routeLines);
+
+            const directionsHTML = response.directions[0].features.map((f) => f.attributes.text).join("<br/>");
+            directions.innerHTML = directionsHTML;
+            startCoords = null;
+            endCoords = null;
+
+          })
+
+          .catch((error) => {
+            console.error(error);
+            alert("There was a problem using the route service. See the console for details.");
+          });
+
+      }
+
+      var RouteIcon = new L.Icon({
+                    iconUrl: 'https://cdn-icons-png.flaticon.com/128/149/149059.png',
+                    iconSize: [30, 30],
+        });
+    var StartIcon = new L.Icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/128/3138/3138667.png',
+                iconSize: [30, 30],
+    });
+    
+      map.on("click", (e) => {
+        const coordinates = [e.latlng.lng, e.latlng.lat];
+
+        if (currentStep === "start") {
+
+          startLayerGroup.clearLayers();
+          endLayerGroup.clearLayers();
+          routeLines.clearLayers();
+
+          L.marker(e.latlng,{icon:StartIcon}).addTo(startLayerGroup);
+          startCoords = coordinates;
+
+          currentStep = "end";
+        } else {
+
+          L.marker(e.latlng,{icon:RouteIcon}).addTo(endLayerGroup);
+          endCoords = coordinates;
+
+          currentStep = "start";
+        }
+
+        if (startCoords && endCoords) {
+          updateRoute();
+        }
+
+      });
+
+    </script>
+
+  </body>
+
+</html>
